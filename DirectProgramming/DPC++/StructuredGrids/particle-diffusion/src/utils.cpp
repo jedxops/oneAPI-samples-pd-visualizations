@@ -325,3 +325,9 @@ void CheckVslError(int err_code) {
     exit(EXIT_FAILURE);
   }
 }
+
+// Outputs n*10+1 newlines (clears screen and flushes output buffer)
+void clear(int n) {
+  for (int i = 0; i < n; ++i) cout << "\n\n\n\n\n\n\n\n\n\n";
+  cout << endl;
+}
