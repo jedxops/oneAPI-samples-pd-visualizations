@@ -16,21 +16,22 @@ void Usage() {
   cout << "Particle Diffusion DPC++ code sample help message:\n";
 #if !WINDOWS
   cout << "\nUsage: ./<binary_name> <flags>"
-       << "\n--------------------------------------------------------"
-       << "\n|Flag | Variable name    | Range      | Default value  |"
-       << "\n|-----|------------------|------------|----------------|"
-       << "\n|-i   | n_iterations     | [1, inf]   | [default=10000]|"
-       << "\n|-p   | n_particles      | [1, inf]   | [default=256]  |"
-       << "\n|-g   | grid_size        | [1, inf]   | [default=22]   |"
-       << "\n|-r   | seed             | [-inf, inf]| [default=777]  |"
-       << "\n|-c   | cpu_flag         | [0, 1]     | [default=0]    |"
-       << "\n|-o   | grid_output_flag | [0, 1]     | [default=1]    |"
-       << "\n--------------------------------------------------------\n\n";
+       << "\n-------------------------------------------------------------"
+       << "\n|Flag | Variable name         | Range      | Default value  |"
+       << "\n|-----|-----------------------|------------|----------------|"
+       << "\n|-i   | n_iterations          | [1, inf]   | [default=10000]|"
+       << "\n|-p   | n_particles           | [1, inf]   | [default=256]  |"
+       << "\n|-g   | grid_size             | [1, inf]   | [default=22]   |"
+       << "\n|-r   | seed                  | [-inf, inf]| [default=777]  |"
+       << "\n|-c   | cpu_flag              | [0, 1]     | [default=0]    |"
+       << "\n|-s   | output_snapshots_flag | [0, 1]     | [default=1]    |"
+       << "\n|-o   | grid_output_flag      | [0, 1]     | [default=1]    |"
+       << "\n-------------------------------------------------------------\n\n";
 #else   // WINDOWS
   cout << "\nUsage: ";
   cout << "./<binary_name> <Number of Iterations> <Number of Particles> "
        << "<Size of Square Grid> <Seed for RNG> <1/0 Flag for CPU Comparison> "
-       << "<1/0 Flag for Grid Output>"
+       << "<1/0 Flag for Snapshot Output> <1/0 Flag for Grid Output>"
        << "\n--------------------------------------------------------"
        << "\n|Argument name           | Range      | Default value  |"
        << "\n|------------------------|------------|----------------|"
@@ -39,6 +40,7 @@ void Usage() {
        << "\n|Size of Square Grid     | [1, inf]   | [default=22]   |"
        << "\n|Seed for RNG            | [-inf, inf]| [default=777]  |"
        << "\n|Flag for CPU comparison | [0, 1]     | [default=0]    |"
+       << "\n|Flag for snapshot output| [0, 1]     | [default=1]    |"
        << "\n|Flag for Grid Output    | [0, 1]     | [default=1]    |"
        << "\n--------------------------------------------------------\n\n";
 #endif  // WINDOWS
@@ -73,57 +75,23 @@ bool CompareMatrices(const size_t* grid1, const size_t* grid2,
   return true;
 }
 
-// This function prints a vector
-template <typename T>
-void PrintVector(const T* vector, const size_t n) {
-  cout << "\n";
-  for (size_t i = 0; i < n; ++i) {
-    cout << vector[i] << " ";
-  }
-  cout << "\n";
-}
-
-// This function prints a 2D matrix
-template <typename T>
-void PrintMatrix(const T** matrix, const size_t size_X, const size_t size_Y) {
-  cout << "\n";
-  for (size_t i = 0; i < size_X; ++i) {
-    for (size_t j = 0; j < size_Y; ++j) {
-      cout << std::setw(3) << matrix[i][j] << " ";
-    }
-    cout << "\n";
-  }
-}
-
-// This function prints a 1D vector as a matrix
-template <typename T>
-void PrintVectorAsMatrix(const T* vector, const size_t size_X,
-                         const size_t size_Y) {
-  cout << "\n";
-  for (size_t j = 0; j < size_X; ++j) {
-    for (size_t i = 0; i < size_Y; ++i) {
-      cout << std::setw(3) << vector[j * size_Y + i] << " ";
-    }
-    cout << "\n";
-  }
-}
-
 #if !WINDOWS
 // Command line argument parser
 int ParseArgs(const int argc, char* argv[], size_t* n_iterations,
               size_t* n_particles, size_t* grid_size, int* seed,
-              unsigned int* cpu_flag, unsigned int* grid_output_flag) {
+              unsigned int* cpu_flag, unsigned int* output_snapshots_flag,
+              unsigned int* grid_output_flag) {
   int retv = 0;
   int negative_seed = 0;
-  int cl_option;
+  int option;
   // Parse user-specified parameters
-  while ((cl_option = getopt(argc, argv, "i:p:g:r:c:o:h")) != -1 && retv == 0) {
+  while ((option = getopt(argc, argv, "i:p:g:r:c:s:o:h")) != -1 && !retv) {
     if (optarg) {
-      if (cl_option == 'r' && optarg[0] == '-') negative_seed = 1;
-      if (negative_seed == 0) retv = IsNum(optarg);
-      if (retv == 1) goto usage_label;
+      if (option == 'r' && optarg[0] == '-') negative_seed = 1;
+      if (!negative_seed) retv = IsNum(optarg);
+      if (retv) goto usage_label;
     }
-    switch (cl_option) {
+    switch (option) {
       case 'i':
         *n_iterations = stoi(optarg);
         break;
@@ -138,6 +106,9 @@ int ParseArgs(const int argc, char* argv[], size_t* n_iterations,
         break;
       case 'c':
         *cpu_flag = stoul(optarg);
+        break;
+      case 's':
+        *output_snapshots_flag = stoul(optarg);
         break;
       case 'o':
         *grid_output_flag = stoul(optarg);
@@ -154,16 +125,18 @@ int ParseArgs(const int argc, char* argv[], size_t* n_iterations,
   }
   if ((*cpu_flag != 1 && *cpu_flag != 0) ||
       (*grid_output_flag != 1 && *grid_output_flag != 0) ||
+      (*output_snapshots_flag != 1 && *output_snapshots_flag != 0) ||
       (*n_iterations == 0))
     retv = 1;
-  if (retv == 1) Usage();
+  if (retv) Usage();
   return retv;
 }  // End of function ParseArgs()
 #else   // WINDOWS
 // Windows command line argument parser
 int ParseArgsWindows(int argc, char* argv[], size_t* n_iterations,
                      size_t* n_particles, size_t* grid_size, int* seed,
-                     unsigned int* cpu_flag, unsigned int* grid_output_flag) {
+                     unsigned int* cpu_flag, unsigned int* output_snaphots_flag,
+                     unsigned int* grid_output_flag) {
   int retv = 0;
   // Parse user-specified parameters
   try {
@@ -174,15 +147,17 @@ int ParseArgsWindows(int argc, char* argv[], size_t* n_iterations,
     *grid_size = stoi(argv[3]);
     *seed = stoi(argv[4]);
     *cpu_flag = stoul(argv[5]);
-    *grid_output_flag = stoul(argv[6]);
+    *output_snapshots_flag = stoul(argv[6]);
+    *grid_output_flag = stoul(argv[7]);
   } catch (...) {
     retv = 1;
   }
   if ((*cpu_flag != 1 && *cpu_flag != 0) ||
       (*grid_output_flag != 1 && *grid_output_flag != 0) ||
+      (*output_snapshots_flag != 1 && *output_snapshots_flag != 0) ||
       (*n_iterations == 0))
     retv = 1;
-  if (retv == 1) Usage();
+  if (retv) Usage();
   return retv;
 }
 #endif  // WINDOWS
@@ -196,7 +171,7 @@ void PrintGrids(const size_t* grid, const size_t* grid_cpu,
   const size_t gs2 = grid_size * grid_size;
 
   // Displays final grid only if grid small
-  if (grid_size <= 45 && grid_output_flag == 1) {
+  if (grid_size <= 45 && grid_output_flag) {
     cout << "\n**********************************************************\n";
     cout << "*                           DEVICE                       *\n";
     cout << "**********************************************************\n";
@@ -228,9 +203,9 @@ void PrintGrids(const size_t* grid, const size_t* grid_cpu,
     cout << "**********************************************************\n\n\n";
   }
 
-  if (cpu_flag == 1) {
+  if (cpu_flag) {
     // Displays final grid on cpu only if grid small
-    if (grid_size <= 45 && grid_output_flag == 1) {
+    if (grid_size <= 45 && grid_output_flag) {
       cout << "\n";
       cout << "**********************************************************\n";
       cout << "*                           CPU                          *\n";
@@ -327,7 +302,7 @@ void CheckVslError(int err_code) {
 }
 
 // Outputs n*10+1 newlines (clears screen and flushes output buffer)
-void clear(int n) {
+void ClearScreen(int n) {
   for (int i = 0; i < n; ++i) cout << "\n\n\n\n\n\n\n\n\n\n";
   cout << endl;
 }

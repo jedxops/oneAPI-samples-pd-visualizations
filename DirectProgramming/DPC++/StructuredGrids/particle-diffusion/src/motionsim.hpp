@@ -41,29 +41,80 @@ constexpr float sigma = 0.03f;  // Standard Deviation
 void ParticleMotion(sycl::queue&, const int, float*, float*, float*, float*,
                     size_t*, const size_t, const size_t, const size_t,
                     const size_t, const float);
+void ParticleMotionWithSnapshotPrinting(sycl::queue&, const int, float*, float*,
+                                        float*, float*, size_t*, const size_t,
+                                        const size_t, const size_t,
+                                        const size_t, const float,
+                                        const unsigned int);
 void CPUParticleMotion(const int, float*, float*, float*, float*, size_t*,
-                       const size_t, const size_t, const size_t, unsigned int,
+                       const size_t, const size_t, const size_t, const size_t,
                        const float);
+void CPUParticleMotionWithSnapshotPrinting(const int, float*, float*, float*,
+                                           float*, size_t*, const size_t,
+                                           const size_t, const size_t,
+                                           const size_t, const float,
+                                           const unsigned int);
 void Usage();
 int IsNum(const char*);
 bool ValidateDeviceComputation(const size_t*, const size_t*, const size_t,
                                const size_t);
 bool CompareMatrices(const size_t*, const size_t*, const size_t);
-
-template <typename T>
-void PrintVector(const T*, const size_t);
-template <typename T>
-void PrintMatrix(const T**, const size_t, const size_t);
-template <typename T>
-void PrintVectorAsMatrix(T*, const size_t, const size_t);
-
 int ParseArgs(const int, char* [], size_t*, size_t*, size_t*, int*,
-              unsigned int*, unsigned int*);
+              unsigned int*, unsigned int*, unsigned int*);
 int ParseArgsWindows(int, char* [], size_t*, size_t*, size_t*, int*,
-                     unsigned int*, unsigned int*);
+                     unsigned int*, unsigned int*, unsigned int*);
 void PrintGrids(const size_t*, const size_t*, const size_t, const unsigned int,
                 const unsigned int);
 void PrintValidationResults(const size_t*, const size_t*, const size_t,
                             const size_t, const unsigned int,
                             const unsigned int);
 void CheckVslError(int);
+void ClearScreen(int);
+
+// This function prints a vector
+template <typename T>
+void PrintVector(const T* vector, const size_t n) {
+  std::cout << "\n";
+  for (size_t i = 0; i < n; ++i) {
+    std::cout << vector[i] << " ";
+  }
+  std::cout << "\n";
+}
+
+// This function prints a 2D matrix
+template <typename T>
+void PrintMatrix(const T** matrix, const size_t size_X, const size_t size_Y) {
+  std::cout << "\n";
+  for (size_t i = 0; i < size_X; ++i) {
+    for (size_t j = 0; j < size_Y; ++j) {
+      std::cout << std::setw(3) << matrix[i][j] << " ";
+    }
+    std::cout << "\n";
+  }
+}
+
+// This function prints a 1D vector as a matrix
+template <typename T>
+void PrintVectorAsMatrix(const T* vector, const size_t size_X,
+                         const size_t size_Y) {
+  std::cout << "\n";
+  for (size_t j = 0; j < size_X; ++j) {
+    for (size_t i = 0; i < size_Y; ++i) {
+      std::cout << std::setw(3) << vector[j * size_Y + i] << " ";
+    }
+    std::cout << "\n";
+  }
+}
+
+// This function prints a 1D vector as a matrix within DPC++ kernel
+template <typename T>
+void PrintVectorAsMatrixKernel(const T* vector, const size_t size_X,
+                               const size_t size_Y) {
+  std::cout << "\n";
+  for (size_t j = 0; j < size_X; ++j) {
+    for (size_t i = 0; i < size_Y; ++i) {
+      std::cout << std::setw(3) << vector[j * size_Y + i] << " ";
+    }
+    std::cout << "\n";
+  }
+}
